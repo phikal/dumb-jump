@@ -4,7 +4,7 @@
 ;; Author: jack angers and contributors
 ;; Url: https://github.com/jacktasia/dumb-jump
 ;; Version: 0.5.3
-;; Package-Requires: ((emacs "24.4"))
+;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: programming
 
 ;; Dumb Jump is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@
 (require 'cl-lib)
 (require 'eieio)
 (require 'tramp)
+(require 'xref)
 
 (defgroup dumb-jump nil
   "Easily jump to project function and variable definitions"
@@ -2813,6 +2814,33 @@ Functionally equivalent to `xref-pop-marker-stack', except that the
     (run-hooks 'dumb-jump-after-jump-hook)))
 
 
+;;; Xref Backend
+
+(cl-defmethod xref-backend-definitions ((_backend (eql dumb-jump)) prompt)
+  (let* ((inhibit-message (not dumb-jump-debug))
+         (dumb-jump-return-results t)
+         (dumb-jump-async-p nil)
+         (searcher (dumb-jump-pick-searcher prompt))
+         candidates)
+    ;; (cl-defstruct dumb-jump-target path line column context)
+    (dolist (target (dumb-jump-query searcher))
+      (push (xref-make
+             (format "%s:%d"
+                     (file-name-nondirectory
+                      (dumb-jump-target-path target))
+                     (dumb-jump-target-line target))
+             (xref-make-file-location
+              (dumb-jump-target-path target)
+              (dumb-jump-target-line target)
+              (dumb-jump-target-column target)))
+            candidates))
+    candidates))
+
+(defun dumb-jump-xref-activate ()
+  "Function to activate xref backend."
+  'dumb-jump)
+
+
 ;;; Minor Mode
 
 ;;;###autoload
@@ -2827,7 +2855,12 @@ Functionally equivalent to `xref-pop-marker-stack', except that the
 (define-minor-mode dumb-jump-mode
     "Minor mode for jumping to variable and function definitions"
   :global t
-  :keymap dumb-jump-mode-map)
+  :keymap dumb-jump-mode-map
+  (if dumb-jump-mode
+      (add-hook 'xref-backend-functions
+                #'dumb-jump-xref-activate)
+    (remove-hook 'xref-backend-functions
+                 #'dumb-jump-xref-activate)))
 
 (provide 'dumb-jump)
 
