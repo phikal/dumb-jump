@@ -45,15 +45,6 @@
 
 ;;; User Options
 
-(defcustom dumb-jump-window 'current
-  "Which window to use when jumping.  Valid options are 'current (default) or 'other."
-  :type '(choice (const :tag "Current window" current)
-          (const :tag "Other window" other)))
-
-(defcustom dumb-jump-use-visible-window t
-  "When true will jump in a visible window if that window already has the file open."
-  :type 'boolean)
-
 (defcustom dumb-jump-prefer-searcher nil
   "The preferred searcher to use 'ag, 'rg, 'git-grep, 'gnu-grep,or 'grep.
 If nil then the most optimal searcher will be chosen at runtime."
@@ -1859,10 +1850,6 @@ a symbol then it's probably a function call"
 This should only be needed in the rarest of cases."
   :type 'string)
 
-(defcustom dumb-jump-after-jump-hook nil
-  "Hooks called after jumping."
-  :type 'hook)
-
 (defcustom dumb-jump-aggressive nil
   "If non-nil, jump aggressively with the possibility of a false positive.
 If `nil` always show list of more than 1 match."
@@ -1922,10 +1909,6 @@ confirmation but print a warning."
     (hcl . "#"))
   "List of one-line comments organized by language."
   :type '(alist :key-type symbol :value-type string))
-
-(defcustom dumb-jump-async-p t
-  "If non-nil, queries will be executed asynchronously."
-  :type 'boolean)
 
 
 ;;; Searcher Baseclass and Methods
@@ -2511,30 +2494,6 @@ locate the symbol at point."
             (throw 'found searcher)))
         (error "No usable search tool found")))))
 
-(defun dumb-jump-sentinel (proc event)
-  "Sentinel to PROC output when process finishes.
-Any value besides \"finished\" for EVENT is an error."
-  (let ((inhibit-message (not dumb-jump-debug))
-        (searcher (process-get proc :dumb-jump-searcher)))
-    (unwind-protect
-         (cond ((and dumb-jump-fallback-search
-                     (with-current-buffer (process-buffer proc)
-                       (= (point-min) (point-max)))
-                     (not (equal (list dumb-jump-fallback-regex)
-                                 (oref searcher regexps))))
-                (setf (oref searcher regexps)
-                      (list dumb-jump-fallback-regex))
-                (dumb-jump-query searcher))
-               ((string= event "finished\n")
-                (with-current-buffer (process-buffer proc)
-                  (goto-char (point-min))
-                  (dumb-jump-process-results searcher)))
-               (t (error "Unexpected event %s"
-                         (replace-regexp-in-string "\n$" "" event))))
-      (when (and (buffer-live-p (process-buffer proc))
-                 (not dumb-jump-debug))
-        (kill-buffer (process-buffer proc))))))
-
 (defun dumb-jump-query (searcher)
   "Run query using SEARCHER."
   (cl-assert (cl-typep searcher 'dumb-jump-searcher))
@@ -2545,16 +2504,12 @@ Any value besides \"finished\" for EVENT is an error."
     (cl-assert (listp cmd))
     (cl-assert (cl-every #'stringp cmd))
     (message "Query command: %S" cmd)
-    (if dumb-jump-async-p
-        (let ((proc (apply #'start-file-process "dumb-jump" buf cmd)))
-          (process-put proc :dumb-jump-searcher searcher)
-          (set-process-sentinel proc #'dumb-jump-sentinel))
-      (with-current-buffer buf
-        (apply #'process-file (car cmd) nil t nil (cdr cmd))
-        (goto-char (point-min))
-        (prog1 (dumb-jump-process-results searcher)
-          (unless dumb-jump-debug
-            (kill-buffer)))))))
+    (with-current-buffer buf
+      (apply #'process-file (car cmd) nil t nil (cdr cmd))
+      (goto-char (point-min))
+      (prog1 (dumb-jump-process-results searcher)
+        (unless dumb-jump-debug
+          (kill-buffer))))))
 
 
 ;;; Result Handling
@@ -2594,13 +2549,6 @@ The match data is modified by this function."
                                               (match-beginning 3))
                                    :context (match-string 3)))))))
 
-(defvar dumb-jump-return-results nil
-  "If non-nil, make `dumb-jump-process-results' return results.
-Has to be used with a nil value for `dumb-jump-async-p'.")
-
-(defvar dumb-jump-order-results t
-  "If non-nil, order results by distance to point.")
-
 (defun dumb-jump-process-results (searcher)
   "Process results in buffer using SEARCHER.
 Depending on the dynamic context, this means sorting and
@@ -2610,10 +2558,9 @@ filtering the raw data, and then passing it on to
   (let ((parsed (save-match-data
                   (delete-dups
                    (dumb-jump-parse-response searcher)))))
-    (when (and dumb-jump-order-results
-               (< 1 (length parsed)))
+    (when (< 1 (length parsed))
       (cl-callf2 dumb-jump-sort-results searcher parsed))
-    (dumb-jump-handle-results searcher parsed)))
+    parsed))
 
 (defun dumb-jump-sort-results (searcher parsed)
   "Sort PARSED using SEARCHER."
@@ -2676,153 +2623,13 @@ filtering the raw data, and then passing it on to
         (list (car parsed))
       parsed)))
 
-(defun dumb-jump-handle-results (searcher parsed)
-  "Handle PARSED using SEARCHER."
-  (cl-assert (cl-typep searcher 'dumb-jump-searcher))
-  (cond (dumb-jump-return-results parsed)
-        ((cdr parsed)                   ; (> (length parsed) 1)
-         (dumb-jump-open-target searcher (dumb-jump-choose-target parsed)))
-        ((car parsed)                   ; (= (length parsed) 1)
-         (dumb-jump-open-target searcher (car parsed)))
-        (t (error "No results"))))      ; (= (length parsed) 0)
-
-(defun dumb-jump-choose-target (targets)
-  "Prompt user to choose a member of TARGETS."
-  (cl-assert (cl-every #'dumb-jump-target-p targets))
-  (let (options)
-    (dolist (target targets)
-      (push (cons (format "%s:%s: %s"
-                          (file-name-nondirectory
-                           (dumb-jump-target-path target))
-                          (dumb-jump-target-line target)
-                          (dumb-jump-target-context target))
-                  target)
-            options))
-    (let ((choice (completing-read "Jump to: " options nil t)))
-      (cdr (or (assoc choice options)
-               (error "No target chosen"))))))
-
-(defun dumb-jump-open-target (searcher target)
-  "Open TARGET using SEARCHER."
-  (cl-assert (cl-typep searcher 'dumb-jump-searcher))
-  (cl-assert (dumb-jump-target-p target))
-  (unless (let* ((path (dumb-jump-target-path target))
-                 (buf (find-buffer-visiting path)))
-            (and dumb-jump-confirm-jump-to-modified-file
-                 buf (buffer-modified-p buf)
-                 (not (yes-or-no-p (concat path " has been\
- modified, so the location may be wrong. Continue? ")))))
-    (if (fboundp 'xref-push-marker-stack)
-        (xref-push-marker-stack (oref searcher marker))
-      (with-no-warnings
-        (ring-insert find-tag-marker-ring (oref searcher marker))))
-    (let* ((path (dumb-jump-target-path target))
-           (buf (find-buffer-visiting path))
-           (win (get-buffer-window buf 'visible)))
-      ;; TODO: re-implement tool-tip support using popup and posframe
-      (cond ((and dumb-jump-use-visible-window buf win)
-             (select-window win))
-            (buf
-             (select-window (display-buffer buf)))
-            ((memq 'other (oref searcher options))
-             (find-file-other-window path))
-            (t (find-file path)))
-      (goto-char (point-min))
-      (forward-line (1- (dumb-jump-target-line target)))
-      (when (dumb-jump-target-column target)
-        (forward-char (dumb-jump-target-column target)))
-      (with-demoted-errors "Error running `dumb-jump-after-jump-hook': %S"
-        (run-hooks 'dumb-jump-after-jump-hook)))))
-
-
-;;; Interactive Commands
-
-;;;###autoload
-(defun dumb-jump-go (&optional use-tooltip prefer-external prompt)
-  "Go to the function/variable declaration for thing at point.
-When USE-TOOLTIP, a tooltip jump preview will show instead.
-When PREFER-EXTERNAL, external matches are sorted before
-current file.
-If PROMPT, try to go to PROMPT instead of the symbol at point."
-  (interactive "P")
-  (let ((inhibit-message (not dumb-jump-debug))
-        (searcher (dumb-jump-pick-searcher prompt)))
-    (when use-tooltip
-      ;; FIXME: not currently implemented
-      (push 'toolip (oref searcher options)))
-    (when prefer-external
-      (push 'external (oref searcher options)))
-    (push dumb-jump-window (oref searcher options))
-    (dumb-jump-query searcher)))
-
-;;;###autoload
-(defun dumb-jump-quick-look ()
-  "Run `dumb-jump-go' in quick look mode.
-That is, show a tooltip of where it would jump instead."
-  (interactive)
-  (dumb-jump-go t))
-
-;;;###autoload
-(defun dumb-jump-go-other-window ()
-  "Like `dumb-jump-go', but open result in other window."
-  (interactive)
-  (let ((dumb-jump-window 'other))
-    (dumb-jump-go)))
-
-;;;###autoload
-(defun dumb-jump-go-current-window ()
-  "Like `dumb-jump-go', but force opening in current window."
-  (interactive)
-  (let ((dumb-jump-window 'current))
-    (dumb-jump-go)))
-
-;;;###autoload
-(defun dumb-jump-go-prefer-external ()
-  "Run `dumb-jump-go', but prefer an external match.
-This means that in case there is more than one match, those not
-in the current file should be listed in front of the others in
-the current file."
-  (interactive)
-  (dumb-jump-go nil t))
-
-;;;###autoload
-(defun dumb-jump-go-prompt ()
-  "Like `dumb-jump-go', but prompt for symbol to look for."
-  (interactive)
-  (let* ((at-point (dumb-jump-search-dwim))
-         (prompt (if at-point
-                     (format "Jump to (defaults to `%s'): " at-point)
-                   "Jump to: "))
-         (symbol (read-from-minibuffer prompt nil nil nil nil at-point)))
-    (dumb-jump-go nil nil symbol)))
-
-;;;###autoload
-(defun dumb-jump-go-prefer-external-other-window ()
-  "Like `dumb-jump-go-prefer-external', but use other window."
-  (interactive)
-  (let ((dumb-jump-window 'other))
-    (dumb-jump-go-prefer-external)))
-
-;;;###autoload
-(defun dumb-jump-back ()
-  "Jump back to where the last jump was done.
-Functionally equivalent to `xref-pop-marker-stack', except that the
-`dumb-jump-after-jump-hook' hook is run."
-  (interactive)
-  (pop-tag-mark)
-  (with-demoted-errors "Error running `dumb-jump-after-jump-hook': %S"
-    (run-hooks 'dumb-jump-after-jump-hook)))
-
 
 ;;; Xref Backend
 
 (cl-defmethod xref-backend-definitions ((_backend (eql dumb-jump)) prompt)
   (let* ((inhibit-message (not dumb-jump-debug))
-         (dumb-jump-return-results t)
-         (dumb-jump-async-p nil)
          (searcher (dumb-jump-pick-searcher prompt))
          candidates)
-    ;; (cl-defstruct dumb-jump-target path line column context)
     (dolist (target (dumb-jump-query searcher))
       (push (xref-make
              (format "%s:%d"
@@ -2839,28 +2646,6 @@ Functionally equivalent to `xref-pop-marker-stack', except that the
 (defun dumb-jump-xref-activate ()
   "Function to activate xref backend."
   'dumb-jump)
-
-
-;;; Minor Mode
-
-;;;###autoload
-(defvar dumb-jump-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-M-g") 'dumb-jump-go)
-    (define-key map (kbd "C-M-b") 'dumb-jump-back)
-    (define-key map (kbd "C-M-q") 'dumb-jump-quick-look)
-    map))
-
-;;;###autoload
-(define-minor-mode dumb-jump-mode
-    "Minor mode for jumping to variable and function definitions"
-  :global t
-  :keymap dumb-jump-mode-map
-  (if dumb-jump-mode
-      (add-hook 'xref-backend-functions
-                #'dumb-jump-xref-activate)
-    (remove-hook 'xref-backend-functions
-                 #'dumb-jump-xref-activate)))
 
 (provide 'dumb-jump)
 
