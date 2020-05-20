@@ -213,7 +213,7 @@ and then concatenated into a single string."
   "Check if DIR is a git root directory."
   (file-directory-p (expand-file-name ".git" dir)))
 
-(defun dumb-jump-get-project-root (&optional filepath)
+(defun dumb-jump-get-project-root (&optional filepath no-default)
   "Attempt to find project root directory.
 Keep looking at the parent dir of FILEPATH until a denoter
 file/dir is found."
@@ -221,9 +221,11 @@ file/dir is found."
                        (buffer-file-name)
                        default-directory))
          (name (or dumb-jump-project
-                   (locate-dominating-file filepath #'dumb-jump-get-config)
-                   dumb-jump-default-project)))
-    (file-name-as-directory (expand-file-name name))))
+                   (locate-dominating-file filepath #'dumb-jump-get-config))))
+    (if no-default
+        (and name (file-name-as-directory (expand-file-name name)))
+      (let ((name (or name dumb-jump-default-project)))
+        (file-name-as-directory (expand-file-name name))))))
 
 (defun dumb-jump-get-language-from-mode ()
   "Extract the language from the 'major-mode' name."
@@ -598,7 +600,8 @@ filtering the raw data, and then passing it on to
 
 (defun dumb-jump-xref-activate ()
   "Function to activate xref backend."
-  'dumb-jump)
+  (and (dumb-jump-get-project-root nil t)
+       'dumb-jump))
 
 (provide 'dumb-jump)
 
