@@ -58,8 +58,8 @@
       (push "-G" args))
     (when (string= (file-name-extension (oref searcher current-file)) "gz")
       (push "--search-zip" args))
-    (nconc (list dumb-jump-ag-cmd "--nocolor" "--nogroup")
-           args (list (oref searcher root)))))
+    (append (list dumb-jump-ag-cmd "--nocolor" "--nogroup")
+            args (list (oref searcher root)))))
 
 (cl-defmethod dumb-jump-populate-regexp ((searcher dumb-jump-ag) regex)
   (cl-call-next-method

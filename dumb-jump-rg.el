@@ -48,10 +48,10 @@
     (dolist (type query)
       (push type args)
       (push "--type" args))
-    (nconc (list dumb-jump-rg-cmd
-                 "--color" "never" "--no-heading"
-                 "--line-number" "--pcre2" "-U")
-           args (list (oref searcher root)))))
+    (append (list dumb-jump-rg-cmd
+                  "--color" "never" "--no-heading"
+                  "--line-number" "--pcre2" "-U")
+            args (list (oref searcher root)))))
 
 (cl-defmethod dumb-jump-populate-regexp ((searcher dumb-jump-rg) regex)
   (cl-call-next-method

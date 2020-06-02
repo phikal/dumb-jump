@@ -63,9 +63,9 @@ Warnings produced by grep are ignored."
       (push (format "--exclude-dir=%s" exclude) args))
     (dolist (ext query)
       (push (format "--include=*.%s" ext) args))
-    (nconc (list (if (string= (file-name-extension (oref searcher current-file)) "gz")
-                     dumb-jump-zgrep-cmd dumb-jump-grep-cmd))
-           dumb-jump-grep-args args (list (oref searcher root)))))
+    (append (list (if (string= (file-name-extension (oref searcher current-file)) "gz")
+                      dumb-jump-zgrep-cmd dumb-jump-grep-cmd))
+            dumb-jump-grep-args args (list (oref searcher root)))))
 
 (provide 'dumb-jump-grep)
 
