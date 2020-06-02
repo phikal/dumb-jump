@@ -1,3 +1,5 @@
+(require 'dumb-jump)
+
 (defgroup dumb-jump-git-grep nil
   "git-grep subsystem for dumb-jump."
   :group 'dumb-jump)

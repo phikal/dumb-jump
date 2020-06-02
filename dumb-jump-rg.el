@@ -1,3 +1,5 @@
+(require 'dumb-jump)
+
 (defgroup dumb-jump-rg nil
   "Ripgrep subsystem for dumb-jump."
   :group 'dumb-jump)

@@ -1,3 +1,5 @@
+(require 'dumb-jump)
+
 (defgroup dumb-jump-grep nil
   "Grep subsystem for dumb-jump."
   :group 'dumb-jump)

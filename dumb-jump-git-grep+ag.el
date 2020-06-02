@@ -1,3 +1,4 @@
+(require 'dumb-jump)
 (require 'dumb-jump-git-grep)
 (require 'dumb-jump-ag)
 

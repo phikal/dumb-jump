@@ -1,3 +1,5 @@
+(require 'dumb-jump)
+
 (defcustom dumb-jump-find-rules
   '((:type function
      :supports (ag grep rg git-grep)
@@ -1523,7 +1525,8 @@
                                   (:language string)
                                   (:regex string)
                                   (:tests (repeat string))
-                                  (:not (repeat string))))))
+                                  (:not (repeat string)))))
+  :group 'dumb-jump)
 
 (defcustom dumb-jump-language-file-exts
   ;; https://github.com/ggreer/the_silver_searcher/blob/master/tests/list_file_types.t
@@ -1668,7 +1671,8 @@
   :type '(repeat (plist :options ((:language string :tag "Language")
                                   (:ext (string :tag "Extension"))
                                   (:agtype (string :tag "Ag type"))
-                                  (:rgtype (string :tag "Ripgrep type"))))))
+                                  (:rgtype (string :tag "Ripgrep type")))))
+  :group 'dumb-jump)
 
 (defcustom dumb-jump-language-contexts
   '((:language javascript :type function :right "^(")
@@ -1694,7 +1698,8 @@ a symbol then it's probably a function call"
                                   (:left (choice (const :tag Anything nil)
                                                  (string :tag Regular expression)))
                                   (:right (choice (const :tag Anything nil)
-                                                  (string :tag Regular expression)))))))
+                                                  (string :tag Regular expression))))))
+  :group 'dumb-jump)
 
 (defcustom dumb-jump-comments-alist
   '((c++ . "//")
@@ -1739,6 +1744,7 @@ a symbol then it's probably a function call"
     (protobuf . "//")
     (hcl . "#"))
   "List of one-line comments organized by language."
-  :type '(alist :key-type symbol :value-type string))
+  :type '(alist :key-type symbol :value-type string)
+  :group 'dumb-jump)
 
 (provide 'dumb-jump-db)

@@ -1,3 +1,5 @@
+(require 'dumb-jump)
+
 (require 'dumb-jump-grep)
 
 (defgroup dumb-jump-gnu-grep nil

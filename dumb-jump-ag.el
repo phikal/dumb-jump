@@ -1,3 +1,5 @@
+(require 'dumb-jump)
+
 (defgroup dumb-jump-ag nil
   "Ag subsystem for dumb-jump."
   :group 'dumb-jump)
