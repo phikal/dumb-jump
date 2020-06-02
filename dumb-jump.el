@@ -598,8 +598,13 @@ filtering the raw data, and then passing it on to
             candidates))
     candidates))
 
+;;;###autoload
 (defun dumb-jump-xref-activate ()
-  "Function to activate xref backend."
+  "Function to activate xref backend.
+Add this function to `xref-backend-functions' to dumb jump to be
+activiated, whenever it finds a project. It is recommended to add
+it to the end, so that it only gets activated when no better
+option is found."
   (and (dumb-jump-get-project-root nil t)
        'dumb-jump))
 
