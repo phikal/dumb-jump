@@ -2097,6 +2097,8 @@ of project configuration."
 (defun dumb-jump-back ()
   "Jump back to where the last jump was done."
   (interactive)
+  (declare (obsolete "`dumb-jump-back' was obsoleted in favour of `xref-pop-marker-stack'"
+		     "2020-06-19"))
   (with-demoted-errors "Error running `dumb-jump-before-jump-hook': %S"
     (run-hooks 'dumb-jump-before-jump-hook))
   (pop-tag-mark)
@@ -2113,6 +2115,8 @@ of project configuration."
 (defun dumb-jump-go-other-window ()
   "Like 'dumb-jump-go' but use 'find-file-other-window' instead of 'find-file'."
   (interactive)
+  (declare (obsolete "`dumb-jump-go-other-window' was obsoleted in favour of the xref interface"
+		     "2020-06-19"))
   (let ((dumb-jump-window 'other))
         (dumb-jump-go)))
 
@@ -2120,6 +2124,8 @@ of project configuration."
 (defun dumb-jump-go-current-window ()
   "Like dumb-jump-go but always use 'find-file'."
   (interactive)
+  (declare (obsolete "`dumb-jump-go-current-window' was obsoleted in favour of the xref interface"
+		     "2020-06-19"))
   (let ((dumb-jump-window 'current))
         (dumb-jump-go)))
 
@@ -2127,18 +2133,24 @@ of project configuration."
 (defun dumb-jump-go-prefer-external ()
   "Like dumb-jump-go but prefer external matches from the current file."
   (interactive)
+  (declare (obsolete "`dumb-jump-go-prefer-external' was obsoleted in favour of the xref interface"
+		     "2020-06-19"))
   (dumb-jump-go nil t))
 
 ;;;###autoload
 (defun dumb-jump-go-prompt ()
   "Like dumb-jump-go but prompts for function instead of using under point"
   (interactive)
+  (declare (obsolete "`dumb-jump-go-prompt' was obsoleted in favour of the xref interface"
+		     "2020-06-19"))
   (dumb-jump-go nil nil (read-from-minibuffer "Jump to: ")))
 
 ;;;###autoload
 (defun dumb-jump-go-prefer-external-other-window ()
   "Like dumb-jump-go-prefer-external but use 'find-file-other-window' instead of 'find-file'."
   (interactive)
+  (declare (obsolete "`dumb-jump-go-prefer-external-other-window' was obsoleted in favour of the xref interface"
+		     "2020-06-19"))
   (let ((dumb-jump-window 'other))
     (dumb-jump-go-prefer-external)))
 
@@ -2149,6 +2161,8 @@ When USE-TOOLTIP is t a tooltip jump preview will show instead.
 When PREFER-EXTERNAL is t it will sort external matches before
 current file."
   (interactive "P")
+  (declare (obsolete "`dumb-jump-go' was obsoleted in favour of the xref interface"
+		     "2020-06-19"))
   (let* ((start-time (float-time))
          (info (dumb-jump-get-results prompt))
          (end-time (float-time))
