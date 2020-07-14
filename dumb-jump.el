@@ -587,10 +587,7 @@ filtering the raw data, and then passing it on to
          candidates)
     (dolist (target (dumb-jump-query searcher))
       (push (xref-make
-             (format "%s:%d"
-                     (file-name-nondirectory
-                      (dumb-jump-target-path target))
-                     (dumb-jump-target-line target))
+             (dumb-jump-target-context target)
              (xref-make-file-location
               (dumb-jump-target-path target)
               (dumb-jump-target-line target)
