@@ -1,5 +1,3 @@
-(require 'dumb-jump)
-
 (defcustom dumb-jump-find-rules
   '((:type function
      :supports (ag grep rg git-grep)
